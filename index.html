@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Team Attendance</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <meta name="theme-color" content="#8b5cf6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .attendance-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px 30px;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #2d3748;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: 'Cairo', sans-serif;
+            color: #2d3748;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group select:disabled {
+            background: #f7fafc;
+            cursor: not-allowed;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .error-message {
+            color: #e53e3e;
+            font-size: 14px;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .inline-message {
+            font-size: 13px;
+            margin-top: 6px;
+            font-weight: 600;
+            display: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .inline-message.show {
+            display: block;
+        }
+
+        .inline-message.error {
+            color: #c53030;
+            background-color: #fff5f5;
+            border: 1px solid #fc8181;
+        }
+
+        .inline-message.success {
+            color: #2f855a;
+            background-color: #f0fff4;
+            border: 1px solid #68d391;
+        }
+
+        /* Notification Styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            left: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            font-family: 'Cairo', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            transform: translateY(-100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            animation: slideDown 0.3s ease forwards;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .notification.hide {
+            animation: slideUp 0.3s ease forwards;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            color: white;
+        }
+
+        .notification.warning {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+        }
+
+        .notification-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .notification-icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .notification-message {
+            flex: 1;
+        }
+
+        .notification-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .notification-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 480px) {
+            .attendance-container {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            .form-group input,
+            .form-group select {
+                padding: 10px 14px;
+                font-size: 15px;
+            }
+
+            .submit-btn {
+                padding: 12px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Notification Container -->
+    <div id="notification" class="notification" style="display: none;">
+        <div class="notification-content">
+            <span class="notification-icon" id="notificationIcon">✓</span>
+            <span class="notification-message" id="notificationMessage"></span>
+        </div>
+        <button class="notification-close" id="notificationClose">×</button>
+    </div>
+
+    <div class="attendance-container">
+        <div class="header">
+            <h1>Remote Team Attendance</h1>
+            <p>سجل حالة عملك</p>
+        </div>
+
+        <form id="attendanceForm">
+            <div class="form-group">
+                <label for="leader">اختر Team Leader *</label>
+                <select id="leader" name="leader" required>
+                    <option value="">-- اختر Team Leader --</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="agentGroup" style="display: none;">
+                <label for="agent">اختر Agent *</label>
+                <select id="agent" name="agent" required disabled>
+                    <option value="">-- اختر Agent --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="action">اختر Action *</label>
+                <select id="action" name="action" required>
+                    <option value="">-- اختر Action --</option>
+                    <option value="START_SHIFT">تسجيل حضور (بدء الشيفت)</option>
+                    <option value="START_ATTEMPT_1">بدء محاولة أولى</option>
+                    <option value="END_ATTEMPT_1">إنهاء محاولة أولى</option>
+                    <option value="START_ATTEMPT_2">بدء محاولة ثانية</option>
+                    <option value="END_ATTEMPT_2">إنهاء محاولة ثانية</option>
+                    <option value="START_ATTEMPT_3">بدء محاولة ثالثة</option>
+                    <option value="END_ATTEMPT_3">إنهاء محاولة ثالثة</option>
+                    <option value="START_ATTEMPT_4">بدء محاولة رابعة</option>
+                    <option value="END_ATTEMPT_4">إنهاء محاولة رابعة</option>
+                    <option value="START_BREAK">بدء بريك</option>
+                    <option value="END_BREAK">إنهاء بريك (عودة للعمل)</option>
+                    <option value="END_SHIFT">تسجيل انصراف (إنهاء الشيفت)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password *</label>
+                <input type="password" id="password" name="password" placeholder="أدخل كلمة المرور" required>
+                <div id="passwordMessage" class="inline-message"></div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                Submit
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Form elements
+        const leaderSelect = document.getElementById('leader');
+        const agentSelect = document.getElementById('agent');
+        const agentGroup = document.getElementById('agentGroup');
+        const actionSelect = document.getElementById('action');
+        const passwordInput = document.getElementById('password');
+        const form = document.getElementById('attendanceForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Firebase Configuration
+        const FIREBASE_URL = "https://login-system-5ea8a-default-rtdb.firebaseio.com/";
+        const FIREBASE_SECRET = "UWQirCKOkapcB4nSZipVuC4s1iV2Z7a6GGAvLmJH";
+
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfq9wMPNPus8k0J3QCUks59OfuZDz6WttcjGBfYIb1R_8S4GREHM9laxU0O7ZX4gjzEg/exec";
+
+        // Store data from Firebase
+        let firebaseData = {};
+
+        // LocalStorage keys
+        const STORAGE_KEYS = {
+            SELECTED_LEADER: 'attendance_selected_leader',
+            SELECTED_AGENT: 'attendance_selected_agent',
+            AGENT_LAST_ACTION: 'attendance_agent_last_action_',
+            AGENT_LAST_COMPLETED_ATTEMPT: 'attendance_agent_last_completed_attempt_'
+        };
+
+        // Save selected leader and agent to localStorage
+        function saveSelection(leader, agent) {
+            try {
+                if (leader) {
+                    localStorage.setItem(STORAGE_KEYS.SELECTED_LEADER, leader);
+                    console.log('💾 Saved leader to localStorage:', leader);
+                }
+                if (agent) {
+                    localStorage.setItem(STORAGE_KEYS.SELECTED_AGENT, agent);
+                    console.log('💾 Saved agent to localStorage:', agent);
+                }
+            } catch (error) {
+                console.error('❌ Error saving to localStorage:', error);
+            }
+        }
+
+        // Get saved selection from localStorage
+        function getSavedSelection() {
+            try {
+                return {
+                    leader: localStorage.getItem(STORAGE_KEYS.SELECTED_LEADER) || '',
+                    agent: localStorage.getItem(STORAGE_KEYS.SELECTED_AGENT) || ''
+                };
+            } catch (error) {
+                console.error('❌ Error reading from localStorage:', error);
+                return { leader: '', agent: '' };
+            }
+        }
+
+        // Save last action for agent
+        function saveLastAction(agentId, action) {
+            try {
+                if (agentId && action) {
+                    const key = STORAGE_KEYS.AGENT_LAST_ACTION + agentId;
+                    localStorage.setItem(key, action);
+                    console.log('💾 Saved last action for agent:', agentId, action);
+                }
+            } catch (error) {
+                console.error('❌ Error saving last action:', error);
+            }
+        }
+
+        // Save last completed attempt for agent
+        function saveLastCompletedAttempt(agentId, attemptNumber) {
+            try {
+                if (agentId && attemptNumber) {
+                    const key = STORAGE_KEYS.AGENT_LAST_COMPLETED_ATTEMPT + agentId;
+                    localStorage.setItem(key, attemptNumber.toString());
+                    console.log('💾 Saved last completed attempt for agent:', agentId, attemptNumber);
+                }
+            } catch (error) {
+                console.error('❌ Error saving last completed attempt:', error);
+            }
+        }
+
+        // Get last completed attempt for agent
+        function getLastCompletedAttempt(agentId) {
+            try {
+                if (agentId) {
+                    const key = STORAGE_KEYS.AGENT_LAST_COMPLETED_ATTEMPT + agentId;
+                    const attempt = localStorage.getItem(key);
+                    return attempt ? parseInt(attempt) : 0;
+                }
+                return 0;
+            } catch (error) {
+                console.error('❌ Error reading last completed attempt:', error);
+                return 0;
+            }
+        }
+
+        // Get last action for agent
+        function getLastAction(agentId) {
+            try {
+                if (agentId) {
+                    const key = STORAGE_KEYS.AGENT_LAST_ACTION + agentId;
+                    return localStorage.getItem(key);
+                }
+                return null;
+            } catch (error) {
+                console.error('❌ Error getting last action:', error);
+                return null;
+            }
+        }
+
+        // Determine actions after break based on completed attempts
+        function getWorkActionsAfterBreak(agentId) {
+            const lastCompleted = getLastCompletedAttempt(agentId);
+            const actions = [];
+
+            if (lastCompleted === 0) {
+                actions.push({ value: 'START_ATTEMPT_1', text: 'بدء محاولة أولى' });
+            } else if (lastCompleted === 1) {
+                actions.push({ value: 'START_ATTEMPT_2', text: 'بدء محاولة ثانية' });
+            } else if (lastCompleted === 2) {
+                actions.push({ value: 'START_ATTEMPT_3', text: 'بدء محاولة ثالثة' });
+            } else if (lastCompleted === 3) {
+                actions.push({ value: 'START_ATTEMPT_4', text: 'بدء محاولة رابعة' });
+            }
+
+            // Always allow ending shift or taking another break (if policy allows, usually yes)
+            actions.push({ value: 'START_BREAK', text: 'بدء بريك' });
+            actions.push({ value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' });
+
+            return actions;
+        }
+
+        // Clear saved selection
+        function clearSavedSelection() {
+            try {
+                localStorage.removeItem(STORAGE_KEYS.SELECTED_LEADER);
+                localStorage.removeItem(STORAGE_KEYS.SELECTED_AGENT);
+                // Also clear last action and completed attempt when clearing selection
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith(STORAGE_KEYS.AGENT_LAST_ACTION) || key.startsWith(STORAGE_KEYS.AGENT_LAST_COMPLETED_ATTEMPT)) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                console.log('🗑️ Cleared saved selection and agent state');
+            } catch (error) {
+                console.error('❌ Error clearing localStorage:', error);
+            }
+        }
+
+        // Show inline message
+        function showInlineMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            element.textContent = message;
+            element.className = 'inline-message show ' + type;
+            
+            // If it's an error, shake the input slightly
+            if (type === 'error') {
+                const inputId = elementId.replace('Message', '');
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.style.borderColor = '#fc8181';
+                    setTimeout(() => {
+                        input.style.borderColor = '#e2e8f0';
+                    }, 2000);
+                }
+            }
+        }
+
+        // Clear inline messages
+        function clearInlineMessages() {
+            const messages = document.querySelectorAll('.inline-message');
+            messages.forEach(msg => {
+                msg.className = 'inline-message';
+                msg.textContent = '';
+            });
+        }
+
+        // Notification functions
+        function showNotification(message, type = 'info', duration = 4000) {
+            const notification = document.getElementById('notification');
+            const notificationMessage = document.getElementById('notificationMessage');
+            const notificationIcon = document.getElementById('notificationIcon');
+
+            // Set message
+            notificationMessage.textContent = message;
+
+            // Remove all type classes
+            notification.classList.remove('success', 'error', 'warning', 'info');
+
+            // Add the correct type class
+            notification.classList.add(type);
+
+            // Set icon based on type
+            switch (type) {
+                case 'success':
+                    notificationIcon.textContent = '✓';
+                    break;
+                case 'error':
+                    notificationIcon.textContent = '✕';
+                    break;
+                case 'warning':
+                    notificationIcon.textContent = '⚠';
+                    break;
+                default:
+                    notificationIcon.textContent = 'ℹ';
+            }
+
+            // Show notification
+            notification.style.display = 'flex';
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+
+            // Auto hide after duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    hideNotification();
+                }, duration);
+            }
+        }
+
+        function hideNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.remove('show');
+            notification.classList.add('hide');
+            setTimeout(() => {
+                notification.style.display = 'none';
+                notification.classList.remove('hide');
+            }, 300);
+        }
+
+        // Add click event listener to close button
+        document.addEventListener('DOMContentLoaded', function () {
+            const closeBtn = document.getElementById('notificationClose');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', hideNotification);
+            }
+        });
+
+        /**
+         * Firebase Data Structure:
+         * {
+         *   "users": {
+         *     "AgentName1": {
+         *       "leader": "Leader Name",
+         *       "name": "AgentName1",
+         *       "password": "pass123"
+         *     },
+         *     "AgentName2": {
+         *       "leader": "Leader Name",
+         *       "name": "AgentName2",
+         *       "password": "pass456"
+         *     }
+         *   }
+         * }
+         */
+
+        // Load data from Firebase on page load
+        async function loadDataFromFirebase() {
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'جاري التحميل...';
+
+                // Fetch data from Firebase using REST API
+                // Try with auth parameter first
+                let url = `${FIREBASE_URL}.json?auth=${FIREBASE_SECRET}`;
+                let response = await fetch(url);
+
+                // If auth fails, try without auth (in case database rules allow read)
+                if (!response.ok && response.status === 401) {
+                    console.warn('Auth failed, trying without auth parameter');
+                    url = `${FIREBASE_URL}.json`;
+                    response = await fetch(url);
+                }
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Firebase Error Response:', errorText);
+                    throw new Error(`Firebase Error: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Handle different Firebase data structures
+                // If data is null or empty, set empty object
+                if (!data) {
+                    firebaseData = {};
+                    console.warn('Firebase returned null or empty data');
+                    showNotification('لا توجد بيانات في Firebase', 'warning', 4000);
+                } else if (typeof data === 'object') {
+                    firebaseData = data;
+                    console.log('✅ Data loaded successfully from Firebase');
+                } else {
+                    firebaseData = {};
+                    console.warn('Unexpected data type:', typeof data);
+                }
+
+                console.log('📊 Data loaded from Firebase:', firebaseData);
+                console.log('📊 Data type:', typeof firebaseData);
+                console.log('📊 Data keys count:', Object.keys(firebaseData).length);
+                console.log('📊 First few keys:', Object.keys(firebaseData).slice(0, 5));
+
+                // Populate Leaders dropdown
+                populateLeaders();
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            } catch (error) {
+                console.error('❌ Error loading data from Firebase:', error);
+                console.error('Error details:', error.message);
+                showNotification('حدث خطأ في تحميل البيانات من Firebase. يرجى التحقق من الاتصال والمحاولة مرة أخرى.', 'error', 5000);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            }
+        }
+
+        // Extract unique leaders from Firebase data
+        function populateLeaders() {
+            leaderSelect.innerHTML = '<option value="">-- اختر Team Leader --</option>';
+
+            // Extract unique leaders from agents' leader field
+            // Structure: { "users": { "AgentName": { leader: "Leader Name", name: "...", password: "..." } } }
+            const leadersSet = new Set();
+
+            console.log('🔍 Starting to extract leaders...');
+            console.log('🔍 Firebase Data:', firebaseData);
+            console.log('🔍 Firebase Data Keys:', Object.keys(firebaseData));
+
+            // Get users data - check if data is under "users" key
+            let usersData = null;
+
+            if (firebaseData.users) {
+                usersData = firebaseData.users;
+                console.log('✅ Found data under "users" key');
+            } else if (firebaseData && typeof firebaseData === 'object') {
+                // If no "users" key, check if data is directly at root level
+                usersData = firebaseData;
+                console.log('⚠️ No "users" key found, using root level data');
+            } else {
+                console.error('❌ Firebase data is empty or invalid!');
+                leaderSelect.innerHTML = '<option value="">لا يوجد بيانات في Firebase</option>';
+                return;
+            }
+
+            if (!usersData || Object.keys(usersData).length === 0) {
+                console.error('❌ Users data is empty!');
+                leaderSelect.innerHTML = '<option value="">لا يوجد بيانات في Firebase</option>';
+                return;
+            }
+
+            console.log('🔍 Users Data Keys:', Object.keys(usersData));
+            console.log('🔍 Users Data Keys Count:', Object.keys(usersData).length);
+
+            let processedCount = 0;
+            let foundLeadersCount = 0;
+
+            // Loop through all agents and collect unique leader names
+            Object.keys(usersData).forEach(agentKey => {
+                const agent = usersData[agentKey];
+                processedCount++;
+
+                console.log(`\n🔍 Processing Agent #${processedCount}:`, {
+                    key: agentKey,
+                    data: agent,
+                    type: typeof agent
+                });
+
+                // Check if agent exists and is an object
+                if (!agent) {
+                    console.warn(`⚠️ Agent ${agentKey} is null or undefined`);
+                    return;
+                }
+
+                if (typeof agent !== 'object') {
+                    console.warn(`⚠️ Agent ${agentKey} is not an object, it's:`, typeof agent);
+                    return;
+                }
+
+                // Try different possible field names (case-insensitive check)
+                const leaderName = agent.leader ||
+                    agent.Leader ||
+                    agent.leaderName ||
+                    agent.LeaderName ||
+                    agent['leader'] ||
+                    agent['Leader'];
+
+                // console.log(`🔍 Leader name found for ${agentKey}:`, leaderName);
+
+                if (leaderName) {
+                    if (typeof leaderName === 'string' && leaderName.trim() !== '') {
+                        const trimmedLeader = leaderName.trim();
+                        leadersSet.add(trimmedLeader);
+                        foundLeadersCount++;
+                        // console.log(`✅ Found leader: "${trimmedLeader}" for agent: ${agentKey}`);
+                    } else {
+                        // console.warn(`⚠️ Leader name for ${agentKey} is not a valid string:`, leaderName);
+                    }
+                } else {
+                    console.warn(`⚠️ No leader field found for agent: ${agentKey}`);
+                    console.warn(`⚠️ Available fields:`, Object.keys(agent));
+                }
+            });
+
+            // Convert Set to Array and sort alphabetically
+            const leaders = Array.from(leadersSet).sort();
+
+            console.log('\n📋 Summary:');
+            console.log(`   - Processed agents: ${processedCount}`);
+            console.log(`   - Found leaders: ${foundLeadersCount}`);
+            console.log(`   - Unique leaders: ${leaders.length}`);
+            console.log(`   - Leaders list:`, leaders);
+
+            if (leaders.length === 0) {
+                console.error('❌ No leaders found in Firebase data!');
+                console.error('📋 Full Firebase Data Structure:', JSON.stringify(firebaseData, null, 2));
+                leaderSelect.innerHTML = '<option value="">لا يوجد ليدرز متاحين - تحقق من Console</option>';
+                return;
+            }
+
+            // Populate leader dropdown
+            leaders.forEach(leaderName => {
+                const option = document.createElement('option');
+                option.value = leaderName;
+                option.textContent = leaderName;
+                leaderSelect.appendChild(option);
+            });
+
+            console.log(`✅ Successfully populated ${leaders.length} leaders in dropdown`);
+
+            // Restore saved leader selection after populating dropdown
+            restoreSavedSelection();
+        }
+
+        // Restore saved selection from localStorage
+        function restoreSavedSelection() {
+            const saved = getSavedSelection();
+
+            if (saved.leader) {
+                // Check if saved leader exists in dropdown
+                const leaderOption = Array.from(leaderSelect.options).find(
+                    option => option.value === saved.leader
+                );
+
+                if (leaderOption) {
+                    leaderSelect.value = saved.leader;
+                    console.log('✅ Restored saved leader:', saved.leader);
+
+                    // Trigger change event to load agents for this leader
+                    leaderSelect.dispatchEvent(new Event('change'));
+
+                    // After agents are loaded, restore agent selection
+                    setTimeout(() => {
+                        if (saved.agent) {
+                            const agentOption = Array.from(agentSelect.options).find(
+                                option => option.value === saved.agent
+                            );
+
+                            if (agentOption) {
+                                agentSelect.value = saved.agent;
+                                console.log('✅ Restored saved agent:', saved.agent);
+
+                                // Update action dropdown for restored agent
+                                updateActionDropdown(saved.agent);
+                            } else {
+                                console.warn('⚠️ Saved agent not found:', saved.agent);
+                            }
+                        }
+                    }, 100);
+                } else {
+                    console.warn('⚠️ Saved leader not found in dropdown:', saved.leader);
+                }
+            }
+        }
+
+        // When leader is selected, show and populate agents
+        leaderSelect.addEventListener('change', function () {
+            const selectedLeaderName = this.value;
+
+            if (selectedLeaderName) {
+                // Save selected leader to localStorage
+                saveSelection(selectedLeaderName, '');
+
+                agentSelect.disabled = true;
+                agentSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+
+                try {
+                    // Filter agents by selected leader
+                    // Structure: { "users": { "AgentName": { leader: "Leader Name", name: "...", password: "..." } } }
+                    const agents = [];
+
+                    // Get users data - check if data is under "users" key
+                    const usersData = firebaseData.users || firebaseData;
+
+                    Object.keys(usersData).forEach(agentKey => {
+                        const agent = usersData[agentKey];
+                        // Check if this agent belongs to the selected leader
+                        // Try different possible field names for leader
+                        const agentLeader = agent.leader || agent.Leader || agent.leaderName || agent.LeaderName;
+
+                        if (agent && agentLeader === selectedLeaderName) {
+                            agents.push({
+                                id: agentKey,
+                                name: agent.name || agentKey,
+                                password: agent.password || ''
+                            });
+                        }
+                    });
+
+                    // Sort agents by name
+                    agents.sort((a, b) => a.name.localeCompare(b.name));
+
+                    // Populate agent dropdown
+                    agentSelect.innerHTML = '<option value="">-- اختر Agent --</option>';
+
+                    if (agents.length === 0) {
+                        console.warn('No agents found for selected leader');
+                        agentSelect.innerHTML = '<option value="">لا يوجد agents متاحين لهذا الليدر</option>';
+                    } else {
+                        agents.forEach(agent => {
+                            const option = document.createElement('option');
+                            option.value = agent.id;
+                            option.textContent = agent.name;
+                            option.dataset.password = agent.password; // Store password for validation
+                            agentSelect.appendChild(option);
+                        });
+                    }
+
+                    // Show agent dropdown and enable it
+                    agentGroup.style.display = 'block';
+                    agentSelect.disabled = false;
+
+                    // Restore saved agent if exists
+                    const saved = getSavedSelection();
+                    if (saved.agent && selectedLeaderName === saved.leader) {
+                        const agentOption = Array.from(agentSelect.options).find(
+                            option => option.value === saved.agent
+                        );
+                        if (agentOption) {
+                            agentSelect.value = saved.agent;
+                            console.log('✅ Restored saved agent:', saved.agent);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading agents:', error);
+                    agentSelect.innerHTML = '<option value="">حدث خطأ في تحميل الـ Agents</option>';
+                }
+            } else {
+                // Hide agent dropdown if no leader selected
+                agentGroup.style.display = 'none';
+                agentSelect.disabled = true;
+                agentSelect.value = '';
+                // Clear saved selection when leader is cleared
+                saveSelection('', '');
+            }
+        });
+
+        // When agent is selected, save to localStorage and update actions
+        agentSelect.addEventListener('change', function () {
+            const selectedAgentId = this.value;
+            const selectedLeaderName = leaderSelect.value;
+
+            if (selectedAgentId && selectedLeaderName) {
+                // Save both leader and agent to localStorage
+                saveSelection(selectedLeaderName, selectedAgentId);
+
+                // Update action dropdown based on agent's current state
+                updateActionDropdown(selectedAgentId);
+            } else if (!selectedAgentId) {
+                // Clear agent from localStorage if deselected
+                saveSelection(selectedLeaderName, '');
+
+                // Reset action dropdown to all actions
+                actionSelect.innerHTML = '<option value="">-- اختر Action --</option>';
+                actionSelect.disabled = true;
+
+                // Remove state indicator
+                const stateIndicator = document.getElementById('stateIndicator');
+                if (stateIndicator) {
+                    stateIndicator.remove();
+                }
+            }
+        });
+
+        // Get device information
+        function getDeviceInfo() {
+            return {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                screenResolution: `${screen.width}x${screen.height}`,
+                screenColorDepth: screen.colorDepth,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                cookiesEnabled: navigator.cookieEnabled,
+                online: navigator.onLine,
+                devicePixelRatio: window.devicePixelRatio || 1,
+                touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+                browserName: getBrowserName(),
+                browserVersion: getBrowserVersion()
+            };
+        }
+
+        // Helper function to get browser name
+        function getBrowserName() {
+            const ua = navigator.userAgent;
+            if (ua.includes('Chrome') && !ua.includes('Edg')) return 'Chrome';
+            if (ua.includes('Firefox')) return 'Firefox';
+            if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
+            if (ua.includes('Edg')) return 'Edge';
+            if (ua.includes('Opera') || ua.includes('OPR')) return 'Opera';
+            return 'Unknown';
+        }
+
+        // Helper function to get browser version
+        function getBrowserVersion() {
+            const ua = navigator.userAgent;
+            let version = 'Unknown';
+
+            if (ua.includes('Chrome') && !ua.includes('Edg')) {
+                const match = ua.match(/Chrome\/(\d+\.\d+)/);
+                version = match ? match[1] : 'Unknown';
+            } else if (ua.includes('Firefox')) {
+                const match = ua.match(/Firefox\/(\d+\.\d+)/);
+                version = match ? match[1] : 'Unknown';
+            } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
+                const match = ua.match(/Version\/(\d+\.\d+)/);
+                version = match ? match[1] : 'Unknown';
+            } else if (ua.includes('Edg')) {
+                const match = ua.match(/Edg\/(\d+\.\d+)/);
+                version = match ? match[1] : 'Unknown';
+            }
+
+            return version;
+        }
+
+        // Handle state updates (Save completed attempts, Clear on End Shift)
+        function handleStateUpdate(agentId, action) {
+            if (!agentId || !action) return;
+
+            switch (action) {
+                case 'END_ATTEMPT_1':
+                    saveLastCompletedAttempt(agentId, 1);
+                    break;
+                case 'END_ATTEMPT_2':
+                    saveLastCompletedAttempt(agentId, 2);
+                    break;
+                case 'END_ATTEMPT_3':
+                    saveLastCompletedAttempt(agentId, 3);
+                    break;
+                case 'END_ATTEMPT_4':
+                    saveLastCompletedAttempt(agentId, 4);
+                    break;
+                case 'END_SHIFT':
+                    // Clear last completed attempt
+                    try {
+                        const key = STORAGE_KEYS.AGENT_LAST_COMPLETED_ATTEMPT + agentId;
+                        localStorage.removeItem(key);
+                        console.log('🧹 Cleared attempt progress for agent:', agentId);
+                    } catch (error) {
+                        console.error('❌ Error clearing attempt progress:', error);
+                    }
+                    break;
+            }
+        }
+
+        // Get current state and allowed actions based on last action
+        function getCurrentStateAndAllowedActions(agentId) {
+            const lastAction = getLastAction(agentId);
+
+            console.log('🔍 Last action for agent', agentId, ':', lastAction);
+
+            const allActions = [
+                { value: 'START_SHIFT', text: 'تسجيل حضور (بدء الشيفت)' },
+                { value: 'START_BREAK', text: 'بدء بريك' },
+                { value: 'END_BREAK', text: 'إنهاء بريك (عودة للعمل)' },
+                { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
+            ];
+
+            let allowedActions = [];
+            let currentState = 'UNKNOWN';
+
+            if (!lastAction) {
+                // First time login - only START_SHIFT allowed
+                currentState = 'NOT_STARTED';
+                allowedActions = [{ value: 'START_SHIFT', text: 'تسجيل حضور (بدء الشيفت)' }];
+            } else {
+                switch (lastAction) {
+                    case 'START_SHIFT':
+                        // After starting shift, can start first attempt, break, or end shift
+                        currentState = 'SHIFT_STARTED';
+                        allowedActions = [
+                            { value: 'START_ATTEMPT_1', text: 'بدء محاولة أولى' },
+                            { value: 'START_BREAK', text: 'بدء بريك' },
+                            { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
+                        ];
+                        break;
+
+                    case 'START_ATTEMPT_1':
+                        currentState = 'ATTEMPT_1_STARTED';
+                        allowedActions = [
+                            { value: 'END_ATTEMPT_1', text: 'إنهاء محاولة أولى' }
+                        ];
+                        break;
+
+                    case 'END_ATTEMPT_1':
+                        currentState = 'ATTEMPT_1_ENDED';
+                        allowedActions = [
+                            { value: 'START_ATTEMPT_2', text: 'بدء محاولة ثانية' },
+                            { value: 'START_BREAK', text: 'بدء بريك' },
+                            { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
+                        ];
+                        break;
+
+                    case 'START_ATTEMPT_2':
+                        currentState = 'ATTEMPT_2_STARTED';
+                        allowedActions = [
+                            { value: 'END_ATTEMPT_2', text: 'إنهاء محاولة ثانية' }
+                        ];
+                        break;
+
+                    case 'END_ATTEMPT_2':
+                        currentState = 'ATTEMPT_2_ENDED';
+                        allowedActions = [
+                            { value: 'START_ATTEMPT_3', text: 'بدء محاولة ثالثة' },
+                            { value: 'START_BREAK', text: 'بدء بريك' },
+                            { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
+                        ];
+                        break;
+
+                    case 'START_ATTEMPT_3':
+                        currentState = 'ATTEMPT_3_STARTED';
+                        allowedActions = [
+                            { value: 'END_ATTEMPT_3', text: 'إنهاء محاولة ثالثة' }
+                        ];
+                        break;
+
+                    case 'END_ATTEMPT_3':
+                        currentState = 'ATTEMPT_3_ENDED';
+                        allowedActions = [
+                            { value: 'START_ATTEMPT_4', text: 'بدء محاولة رابعة' },
+                            { value: 'START_BREAK', text: 'بدء بريك' },
+                            { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
+                        ];
+                        break;
+
+                    case 'START_ATTEMPT_4':
+                        currentState = 'ATTEMPT_4_STARTED';
+                        allowedActions = [
+                            { value: 'END_ATTEMPT_4', text: 'إنهاء محاولة رابعة' }
+                        ];
+                        break;
+
+                    case 'END_ATTEMPT_4':
+                        currentState = 'ATTEMPT_4_ENDED';
+                        allowedActions = [
+                            { value: 'START_BREAK', text: 'بدء بريك' },
+                            { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
+                        ];
+                        break;
+
+                    case 'START_BREAK':
+                        // After starting break, can only end break
+                        currentState = 'ON_BREAK';
+                        allowedActions = [
+                            { value: 'END_BREAK', text: 'إنهاء بريك (عودة للعمل)' }
+                        ];
+                        break;
+
+                    case 'END_BREAK':
+                        // After ending break, get back to the work state (check what was last completed)
+                        currentState = 'BREAK_ENDED';
+                        // Allow continuing from where we left off - check last attempt status
+                        const workActions = getWorkActionsAfterBreak(agentId);
+                        allowedActions = workActions;
+                        break;
+
+                    case 'END_SHIFT':
+                        // After ending shift, can only start a new shift
+                        currentState = 'SHIFT_ENDED';
+                        allowedActions = [
+                            { value: 'START_SHIFT', text: 'تسجيل حضور (بدء الشيفت)' }
+                        ];
+                        break;
+
+                    default:
+                        // Unknown state - allow all actions
+                        currentState = 'UNKNOWN';
+                        allowedActions = allActions;
+                }
+            }
+
+            console.log('📊 Current state:', currentState, '| Allowed actions:', allowedActions.map(a => a.value));
+
+            return {
+                currentState,
+                allowedActions,
+                lastAction
+            };
+        }
+
+        // Helper function to convert number to Arabic text
+        function getAttemptNumberText(num) {
+            const numbers = ['أولى', 'ثانية', 'ثالثة', 'رابعة'];
+            return numbers[num - 1] || num.toString();
+        }
+
+        // Update action dropdown based on current state
+        function updateActionDropdown(agentId) {
+            const { currentState, allowedActions, lastAction } = getCurrentStateAndAllowedActions(agentId);
+
+            // Clear current options
+            actionSelect.innerHTML = '<option value="">-- اختر Action --</option>';
+
+            // Add allowed actions
+            allowedActions.forEach(action => {
+                const option = document.createElement('option');
+                option.value = action.value;
+                option.textContent = action.text;
+                actionSelect.appendChild(option);
+            });
+
+            // If no actions allowed, show message
+            if (allowedActions.length === 0) {
+                actionSelect.innerHTML = '<option value="">لا توجد أكشن متاحة حالياً</option>';
+                actionSelect.disabled = true;
+            } else {
+                actionSelect.disabled = false;
+            }
+
+            // Add state indicator
+            const stateIndicator = getStateIndicator(currentState, lastAction);
+            updateStateIndicator(stateIndicator);
+        }
+
+        // Get state indicator text
+        function getStateIndicator(state, lastAction) {
+            switch (state) {
+                case 'NOT_STARTED':
+                    return 'لسه مبدأتش.. لازم تعمل Start Shift عشان نسجل حضورك';
+                case 'SHIFT_STARTED':
+                    return 'أنت دلوقتي شغال (Online).. متاح تاخد بريك أو تقفل الشيفت';
+                case 'ATTEMPT_1_STARTED':
+                case 'ATTEMPT_2_STARTED':
+                case 'ATTEMPT_3_STARTED':
+                case 'ATTEMPT_4_STARTED':
+                    return 'أنت دلوقتي في مكالمة/محاولة.. لما تخلص اعمل إنهاء محاولة';
+                case 'ATTEMPT_1_ENDED':
+                case 'ATTEMPT_2_ENDED':
+                case 'ATTEMPT_3_ENDED':
+                case 'ATTEMPT_4_ENDED':
+                    return 'تم إنهاء المحاولة.. تقدر تبدأ اللي بعدها أو تاخد بريك';
+                case 'ON_BREAK':
+                    return 'أنت حالياً في بريك.. لما تخلص اعمل End Break عشان ترجع';
+                case 'BREAK_ENDED':
+                    return 'حمد لله ع السلامة! رجعت للشغل.. تقدر تاخد بريك تاني أو تنهي اليوم';
+                case 'SHIFT_ENDED':
+                    return 'الشيفت ده اتقفل خلاص.. لو هتشتغل تاني ابدأ شيفت جديد';
+                default:
+                    return 'الحالة مش معروفة.. جرب تعمل ريفرش';
+            }
+        }
+
+        // Update state indicator in UI
+        function updateStateIndicator(message) {
+            // Create or update state indicator element
+            let stateIndicator = document.getElementById('stateIndicator');
+            if (!stateIndicator) {
+                stateIndicator = document.createElement('div');
+                stateIndicator.id = 'stateIndicator';
+                stateIndicator.style.cssText = `
+                    margin-top: 8px;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: 500;
+                    text-align: center;
+                    background: rgba(102, 126, 234, 0.1);
+                    color: #667eea;
+                    border: 1px solid rgba(102, 126, 234, 0.2);
+                `;
+                actionSelect.parentNode.appendChild(stateIndicator);
+            }
+            stateIndicator.textContent = message;
+        }
+
+        // Get user's IP address
+        async function getUserIP() {
+            try {
+                // Try multiple IP detection services for reliability
+                const services = [
+                    'https://api.ipify.org?format=json',
+                    'https://ipapi.co/json/',
+                    'https://api.ip.sb/jsonip'
+                ];
+
+                for (const service of services) {
+                    try {
+                        const response = await fetch(service, {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            return data.ip || data.query || null;
+                        }
+                    } catch (error) {
+                        console.warn(`Failed to get IP from ${service}:`, error);
+                        continue;
+                    }
+                }
+
+                // Fallback: try to get from a different service
+                try {
+                    const response = await fetch('https://httpbin.org/ip');
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.origin;
+                    }
+                } catch (error) {
+                    console.warn('All IP detection services failed:', error);
+                }
+
+                return 'Unable to detect IP';
+            } catch (error) {
+                console.error('Error getting user IP:', error);
+                return 'Error detecting IP';
+            }
+        }
+
+        // Form submission
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const leader = leaderSelect.value;
+            const agent = agentSelect.value;
+            const action = actionSelect.value;
+            const password = passwordInput.value;
+
+            // Validate all fields
+            if (!leader || !agent || !action || !password) {
+                showNotification('يرجى ملء جميع الحقول المطلوبة', 'warning', 3000);
+                return;
+            }
+
+            // Validate action based on current state
+            const { allowedActions } = getCurrentStateAndAllowedActions(agent);
+            const isActionAllowed = allowedActions.some(allowedAction => allowedAction.value === action);
+
+            if (!isActionAllowed) {
+                showNotification('هذا الإكشن غير مسموح في الوضع الحالي', 'error', 4000);
+                actionSelect.focus();
+                return;
+            }
+
+            // Validate password
+            const selectedAgentOption = agentSelect.options[agentSelect.selectedIndex];
+            const correctPassword = selectedAgentOption.dataset.password;
+
+            if (!correctPassword) {
+                showNotification('خطأ: لم يتم العثور على كلمة المرور للـ Agent المحدد', 'error', 4000);
+                return;
+            }
+
+            if (password !== correctPassword) {
+                showNotification('كلمة المرور غير صحيحة', 'error', 4000);
+                showInlineMessage('passwordMessage', 'كلمة المرور غير صحيحة ❌', 'error');
+                passwordInput.focus();
+                return;
+            }
+
+            // Clear any inline errors if valid
+            clearInlineMessages();
+            // Show inline success message immediately
+            showInlineMessage('passwordMessage', 'جاري تسجيل الطلب.. ✅', 'success');
+
+            // Get leader and agent names for display
+            const leaderName = leaderSelect.options[leaderSelect.selectedIndex].textContent;
+            const agentName = agentSelect.options[agentSelect.selectedIndex].textContent;
+
+            // Prepare data
+            const deviceInfo = getDeviceInfo();
+            const userIP = await getUserIP();
+
+            const formData = {
+                leader: leaderName,
+                leaderId: leader,
+                agent: agentName,
+                agentId: agent,
+                action: action,
+                timestamp: new Date().toISOString(),
+                deviceInfo: deviceInfo,
+                userIP: userIP
+            };
+
+            console.log('📱 Device Info:', deviceInfo);
+            console.log('🌐 User IP:', userIP);
+            console.log('📊 Complete Form Data:', formData);
+
+            // Disable submit button during submission
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'جاري الإرسال...';
+
+            try {
+                // إرسال البيانات لجوجل شيت
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors", // ⚠️ ضروري جداً عشان المتصفح يسمح بالإرسال
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                // بما اننا مستخدمين no-cors، مش هنقدر نقرأ الرد، بس طالما الكود وصل هنا يبقى اتبعت
+                // بما اننا مستخدمين no-cors، مش هنقدر نقرأ الرد، بس طالما الكود وصل هنا يبقى اتبعت
+                showNotification('تم إرسال البيانات وتسجيل الحضور بنجاح!', 'success', 4000);
+                showInlineMessage('passwordMessage', 'تم التسجيل بنجاح! ✅', 'success');
+
+                // Save the last action performed by this agent
+                saveLastAction(agent, action);
+
+                // Handle state persistence explicitly (Save completed attempts / Clear on End Shift)
+                handleStateUpdate(agent, action);
+
+                // Update action dropdown immediately after saving new action
+                updateActionDropdown(agent);
+
+                // Reset form inputs (Action & Password only)
+                actionSelect.value = '';
+                passwordInput.value = '';
+
+                // Don't reset leader and agent - keep them selected (User Experience)
+
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                showNotification('حدث خطأ أثناء الاتصال بالسيرفر. تأكد من الإنترنت.', 'error', 4000);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            }
+        });
+
+        // Load data from Firebase when page loads
+        loadDataFromFirebase();
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker Registered!', reg))
+                    .catch(err => console.log('SW Registration Failed!', err));
+            });
+        }
+    </script>
+</body>
+
+</html>
