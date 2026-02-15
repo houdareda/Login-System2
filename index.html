@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Remote Team Attendance</title>
     <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="icon-192.png">
-<meta name="theme-color" content="#8b5cf6">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <meta name="theme-color" content="#8b5cf6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -44,6 +45,7 @@
                 opacity: 0;
                 transform: translateY(-20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -148,6 +150,32 @@
             display: block;
         }
 
+        .inline-message {
+            font-size: 13px;
+            margin-top: 6px;
+            font-weight: 600;
+            display: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .inline-message.show {
+            display: block;
+        }
+
+        .inline-message.error {
+            color: #c53030;
+            background-color: #fff5f5;
+            border: 1px solid #fc8181;
+        }
+
+        .inline-message.success {
+            color: #2f855a;
+            background-color: #f0fff4;
+            border: 1px solid #68d391;
+        }
+
         /* Notification Styles */
         .notification {
             position: fixed;
@@ -187,6 +215,7 @@
                 transform: translateY(-100px);
                 opacity: 0;
             }
+
             to {
                 transform: translateY(0);
                 opacity: 1;
@@ -198,6 +227,7 @@
                 transform: translateY(0);
                 opacity: 1;
             }
+
             to {
                 transform: translateY(-100px);
                 opacity: 0;
@@ -289,6 +319,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Notification Container -->
     <div id="notification" class="notification" style="display: none;">
@@ -324,22 +355,25 @@
                 <label for="action">اختر Action *</label>
                 <select id="action" name="action" required>
                     <option value="">-- اختر Action --</option>
-                    <option value="START_SHIFT">Start Shift (Clock In)</option>
-                    <option value="START_BREAK">Start Break</option>
-                    <option value="END_BREAK">End Break (Resume Work)</option>
-                    <option value="END_SHIFT">End Shift (Clock Out)</option>
+                    <option value="START_SHIFT">تسجيل حضور (بدء الشيفت)</option>
+                    <option value="START_ATTEMPT_1">بدء محاولة أولى</option>
+                    <option value="END_ATTEMPT_1">إنهاء محاولة أولى</option>
+                    <option value="START_ATTEMPT_2">بدء محاولة ثانية</option>
+                    <option value="END_ATTEMPT_2">إنهاء محاولة ثانية</option>
+                    <option value="START_ATTEMPT_3">بدء محاولة ثالثة</option>
+                    <option value="END_ATTEMPT_3">إنهاء محاولة ثالثة</option>
+                    <option value="START_ATTEMPT_4">بدء محاولة رابعة</option>
+                    <option value="END_ATTEMPT_4">إنهاء محاولة رابعة</option>
+                    <option value="START_BREAK">بدء بريك</option>
+                    <option value="END_BREAK">إنهاء بريك (عودة للعمل)</option>
+                    <option value="END_SHIFT">تسجيل انصراف (إنهاء الشيفت)</option>
                 </select>
             </div>
 
             <div class="form-group">
                 <label for="password">Password *</label>
-                <input 
-                    type="password" 
-                    id="password" 
-                    name="password" 
-                    placeholder="أدخل كلمة المرور"
-                    required
-                >
+                <input type="password" id="password" name="password" placeholder="أدخل كلمة المرور" required>
+                <div id="passwordMessage" class="inline-message"></div>
             </div>
 
             <button type="submit" class="submit-btn" id="submitBtn">
@@ -370,7 +404,8 @@
         const STORAGE_KEYS = {
             SELECTED_LEADER: 'attendance_selected_leader',
             SELECTED_AGENT: 'attendance_selected_agent',
-            AGENT_LAST_ACTION: 'attendance_agent_last_action_'
+            AGENT_LAST_ACTION: 'attendance_agent_last_action_',
+            AGENT_LAST_COMPLETED_ATTEMPT: 'attendance_agent_last_completed_attempt_'
         };
 
         // Save selected leader and agent to localStorage
@@ -415,18 +450,68 @@
             }
         }
 
+        // Save last completed attempt for agent
+        function saveLastCompletedAttempt(agentId, attemptNumber) {
+            try {
+                if (agentId && attemptNumber) {
+                    const key = STORAGE_KEYS.AGENT_LAST_COMPLETED_ATTEMPT + agentId;
+                    localStorage.setItem(key, attemptNumber.toString());
+                    console.log('💾 Saved last completed attempt for agent:', agentId, attemptNumber);
+                }
+            } catch (error) {
+                console.error('❌ Error saving last completed attempt:', error);
+            }
+        }
+
+        // Get last completed attempt for agent
+        function getLastCompletedAttempt(agentId) {
+            try {
+                if (agentId) {
+                    const key = STORAGE_KEYS.AGENT_LAST_COMPLETED_ATTEMPT + agentId;
+                    const attempt = localStorage.getItem(key);
+                    return attempt ? parseInt(attempt) : 0;
+                }
+                return 0;
+            } catch (error) {
+                console.error('❌ Error reading last completed attempt:', error);
+                return 0;
+            }
+        }
+
         // Get last action for agent
         function getLastAction(agentId) {
             try {
                 if (agentId) {
                     const key = STORAGE_KEYS.AGENT_LAST_ACTION + agentId;
-                    return localStorage.getItem(key) || null;
+                    return localStorage.getItem(key);
                 }
                 return null;
             } catch (error) {
-                console.error('❌ Error reading last action:', error);
+                console.error('❌ Error getting last action:', error);
                 return null;
             }
+        }
+
+        // Determine actions after break based on completed attempts
+        function getWorkActionsAfterBreak(agentId) {
+            const lastCompleted = getLastCompletedAttempt(agentId);
+            const actions = [];
+
+            if (lastCompleted === 0) {
+                actions.push({ value: 'START_ATTEMPT_1', text: 'بدء محاولة أولى' });
+            } else if (lastCompleted === 1) {
+                actions.push({ value: 'START_ATTEMPT_2', text: 'بدء محاولة ثانية' });
+            } else if (lastCompleted === 2) {
+                actions.push({ value: 'START_ATTEMPT_3', text: 'بدء محاولة ثالثة' });
+            } else if (lastCompleted === 3) {
+                actions.push({ value: 'START_ATTEMPT_4', text: 'بدء محاولة رابعة' });
+            }
+
+            // Always allow ending shift or taking another break (if policy allows, usually yes)
+            actions.push({ value: 'START_BREAK', text: 'بدء بريك' });
+            actions.push({ value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' });
+
+            return actions;
         }
 
         // Clear saved selection
@@ -434,10 +519,46 @@
             try {
                 localStorage.removeItem(STORAGE_KEYS.SELECTED_LEADER);
                 localStorage.removeItem(STORAGE_KEYS.SELECTED_AGENT);
-                console.log('🗑️ Cleared saved selection');
+                // Also clear last action and completed attempt when clearing selection
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith(STORAGE_KEYS.AGENT_LAST_ACTION) || key.startsWith(STORAGE_KEYS.AGENT_LAST_COMPLETED_ATTEMPT)) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                console.log('🗑️ Cleared saved selection and agent state');
             } catch (error) {
                 console.error('❌ Error clearing localStorage:', error);
             }
+        }
+
+        // Show inline message
+        function showInlineMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            element.textContent = message;
+            element.className = 'inline-message show ' + type;
+            
+            // If it's an error, shake the input slightly
+            if (type === 'error') {
+                const inputId = elementId.replace('Message', '');
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.style.borderColor = '#fc8181';
+                    setTimeout(() => {
+                        input.style.borderColor = '#e2e8f0';
+                    }, 2000);
+                }
+            }
+        }
+
+        // Clear inline messages
+        function clearInlineMessages() {
+            const messages = document.querySelectorAll('.inline-message');
+            messages.forEach(msg => {
+                msg.className = 'inline-message';
+                msg.textContent = '';
+            });
         }
 
         // Notification functions
@@ -445,18 +566,18 @@
             const notification = document.getElementById('notification');
             const notificationMessage = document.getElementById('notificationMessage');
             const notificationIcon = document.getElementById('notificationIcon');
-            
+
             // Set message
             notificationMessage.textContent = message;
-            
+
             // Remove all type classes
             notification.classList.remove('success', 'error', 'warning', 'info');
-            
+
             // Add the correct type class
             notification.classList.add(type);
-            
+
             // Set icon based on type
-            switch(type) {
+            switch (type) {
                 case 'success':
                     notificationIcon.textContent = '✓';
                     break;
@@ -469,13 +590,13 @@
                 default:
                     notificationIcon.textContent = 'ℹ';
             }
-            
+
             // Show notification
             notification.style.display = 'flex';
             setTimeout(() => {
                 notification.classList.add('show');
             }, 10);
-            
+
             // Auto hide after duration
             if (duration > 0) {
                 setTimeout(() => {
@@ -495,7 +616,7 @@
         }
 
         // Add click event listener to close button
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const closeBtn = document.getElementById('notificationClose');
             if (closeBtn) {
                 closeBtn.addEventListener('click', hideNotification);
@@ -525,27 +646,27 @@
             try {
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'جاري التحميل...';
-                
+
                 // Fetch data from Firebase using REST API
                 // Try with auth parameter first
                 let url = `${FIREBASE_URL}.json`;
                 let response = await fetch(url);
-                
+
                 // If auth fails, try without auth (in case database rules allow read)
                 if (!response.ok && response.status === 401) {
                     console.warn('Auth failed, trying without auth parameter');
                     url = `${FIREBASE_URL}.json`;
                     response = await fetch(url);
                 }
-                
+
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('Firebase Error Response:', errorText);
                     throw new Error(`Firebase Error: ${response.status} ${response.statusText}`);
                 }
-                
+
                 const data = await response.json();
-                
+
                 // Handle different Firebase data structures
                 // If data is null or empty, set empty object
                 if (!data) {
@@ -559,15 +680,15 @@
                     firebaseData = {};
                     console.warn('Unexpected data type:', typeof data);
                 }
-                
+
                 console.log('📊 Data loaded from Firebase:', firebaseData);
                 console.log('📊 Data type:', typeof firebaseData);
                 console.log('📊 Data keys count:', Object.keys(firebaseData).length);
                 console.log('📊 First few keys:', Object.keys(firebaseData).slice(0, 5));
-                
+
                 // Populate Leaders dropdown
                 populateLeaders();
-                
+
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Submit';
             } catch (error) {
@@ -582,18 +703,18 @@
         // Extract unique leaders from Firebase data
         function populateLeaders() {
             leaderSelect.innerHTML = '<option value="">-- اختر Team Leader --</option>';
-            
+
             // Extract unique leaders from agents' leader field
             // Structure: { "users": { "AgentName": { leader: "Leader Name", name: "...", password: "..." } } }
             const leadersSet = new Set();
-            
+
             console.log('🔍 Starting to extract leaders...');
             console.log('🔍 Firebase Data:', firebaseData);
             console.log('🔍 Firebase Data Keys:', Object.keys(firebaseData));
-            
+
             // Get users data - check if data is under "users" key
             let usersData = null;
-            
+
             if (firebaseData.users) {
                 usersData = firebaseData.users;
                 console.log('✅ Found data under "users" key');
@@ -606,51 +727,51 @@
                 leaderSelect.innerHTML = '<option value="">لا يوجد بيانات في Firebase</option>';
                 return;
             }
-            
+
             if (!usersData || Object.keys(usersData).length === 0) {
                 console.error('❌ Users data is empty!');
                 leaderSelect.innerHTML = '<option value="">لا يوجد بيانات في Firebase</option>';
                 return;
             }
-            
+
             console.log('🔍 Users Data Keys:', Object.keys(usersData));
             console.log('🔍 Users Data Keys Count:', Object.keys(usersData).length);
-            
+
             let processedCount = 0;
             let foundLeadersCount = 0;
-            
+
             // Loop through all agents and collect unique leader names
             Object.keys(usersData).forEach(agentKey => {
                 const agent = usersData[agentKey];
                 processedCount++;
-                
+
                 console.log(`\n🔍 Processing Agent #${processedCount}:`, {
                     key: agentKey,
                     data: agent,
                     type: typeof agent
                 });
-                
+
                 // Check if agent exists and is an object
                 if (!agent) {
                     console.warn(`⚠️ Agent ${agentKey} is null or undefined`);
                     return;
                 }
-                
+
                 if (typeof agent !== 'object') {
                     console.warn(`⚠️ Agent ${agentKey} is not an object, it's:`, typeof agent);
                     return;
                 }
-                
+
                 // Try different possible field names (case-insensitive check)
-                const leaderName = agent.leader || 
-                                 agent.Leader || 
-                                 agent.leaderName || 
-                                 agent.LeaderName ||
-                                 agent['leader'] ||
-                                 agent['Leader'];
-                
+                const leaderName = agent.leader ||
+                    agent.Leader ||
+                    agent.leaderName ||
+                    agent.LeaderName ||
+                    agent['leader'] ||
+                    agent['Leader'];
+
                 // console.log(`🔍 Leader name found for ${agentKey}:`, leaderName);
-                
+
                 if (leaderName) {
                     if (typeof leaderName === 'string' && leaderName.trim() !== '') {
                         const trimmedLeader = leaderName.trim();
@@ -665,23 +786,23 @@
                     console.warn(`⚠️ Available fields:`, Object.keys(agent));
                 }
             });
-            
+
             // Convert Set to Array and sort alphabetically
             const leaders = Array.from(leadersSet).sort();
-            
+
             console.log('\n📋 Summary:');
             console.log(`   - Processed agents: ${processedCount}`);
             console.log(`   - Found leaders: ${foundLeadersCount}`);
             console.log(`   - Unique leaders: ${leaders.length}`);
             console.log(`   - Leaders list:`, leaders);
-            
+
             if (leaders.length === 0) {
                 console.error('❌ No leaders found in Firebase data!');
                 console.error('📋 Full Firebase Data Structure:', JSON.stringify(firebaseData, null, 2));
                 leaderSelect.innerHTML = '<option value="">لا يوجد ليدرز متاحين - تحقق من Console</option>';
                 return;
             }
-            
+
             // Populate leader dropdown
             leaders.forEach(leaderName => {
                 const option = document.createElement('option');
@@ -689,9 +810,9 @@
                 option.textContent = leaderName;
                 leaderSelect.appendChild(option);
             });
-            
+
             console.log(`✅ Successfully populated ${leaders.length} leaders in dropdown`);
-            
+
             // Restore saved leader selection after populating dropdown
             restoreSavedSelection();
         }
@@ -699,27 +820,27 @@
         // Restore saved selection from localStorage
         function restoreSavedSelection() {
             const saved = getSavedSelection();
-            
+
             if (saved.leader) {
                 // Check if saved leader exists in dropdown
                 const leaderOption = Array.from(leaderSelect.options).find(
                     option => option.value === saved.leader
                 );
-                
+
                 if (leaderOption) {
                     leaderSelect.value = saved.leader;
                     console.log('✅ Restored saved leader:', saved.leader);
-                    
+
                     // Trigger change event to load agents for this leader
                     leaderSelect.dispatchEvent(new Event('change'));
-                    
+
                     // After agents are loaded, restore agent selection
                     setTimeout(() => {
                         if (saved.agent) {
                             const agentOption = Array.from(agentSelect.options).find(
                                 option => option.value === saved.agent
                             );
-                            
+
                             if (agentOption) {
                                 agentSelect.value = saved.agent;
                                 console.log('✅ Restored saved agent:', saved.agent);
@@ -738,30 +859,30 @@
         }
 
         // When leader is selected, show and populate agents
-        leaderSelect.addEventListener('change', function() {
+        leaderSelect.addEventListener('change', function () {
             const selectedLeaderName = this.value;
-            
+
             if (selectedLeaderName) {
                 // Save selected leader to localStorage
                 saveSelection(selectedLeaderName, '');
-                
+
                 agentSelect.disabled = true;
                 agentSelect.innerHTML = '<option value="">جاري التحميل...</option>';
-                
+
                 try {
                     // Filter agents by selected leader
                     // Structure: { "users": { "AgentName": { leader: "Leader Name", name: "...", password: "..." } } }
                     const agents = [];
-                    
+
                     // Get users data - check if data is under "users" key
                     const usersData = firebaseData.users || firebaseData;
-                    
+
                     Object.keys(usersData).forEach(agentKey => {
                         const agent = usersData[agentKey];
                         // Check if this agent belongs to the selected leader
                         // Try different possible field names for leader
                         const agentLeader = agent.leader || agent.Leader || agent.leaderName || agent.LeaderName;
-                        
+
                         if (agent && agentLeader === selectedLeaderName) {
                             agents.push({
                                 id: agentKey,
@@ -770,13 +891,13 @@
                             });
                         }
                     });
-                    
+
                     // Sort agents by name
                     agents.sort((a, b) => a.name.localeCompare(b.name));
-                    
+
                     // Populate agent dropdown
                     agentSelect.innerHTML = '<option value="">-- اختر Agent --</option>';
-                    
+
                     if (agents.length === 0) {
                         console.warn('No agents found for selected leader');
                         agentSelect.innerHTML = '<option value="">لا يوجد agents متاحين لهذا الليدر</option>';
@@ -789,11 +910,11 @@
                             agentSelect.appendChild(option);
                         });
                     }
-                    
+
                     // Show agent dropdown and enable it
                     agentGroup.style.display = 'block';
                     agentSelect.disabled = false;
-                    
+
                     // Restore saved agent if exists
                     const saved = getSavedSelection();
                     if (saved.agent && selectedLeaderName === saved.leader) {
@@ -820,7 +941,7 @@
         });
 
         // When agent is selected, save to localStorage and update actions
-        agentSelect.addEventListener('change', function() {
+        agentSelect.addEventListener('change', function () {
             const selectedAgentId = this.value;
             const selectedLeaderName = leaderSelect.value;
 
@@ -897,6 +1018,36 @@
             return version;
         }
 
+        // Handle state updates (Save completed attempts, Clear on End Shift)
+        function handleStateUpdate(agentId, action) {
+            if (!agentId || !action) return;
+
+            switch (action) {
+                case 'END_ATTEMPT_1':
+                    saveLastCompletedAttempt(agentId, 1);
+                    break;
+                case 'END_ATTEMPT_2':
+                    saveLastCompletedAttempt(agentId, 2);
+                    break;
+                case 'END_ATTEMPT_3':
+                    saveLastCompletedAttempt(agentId, 3);
+                    break;
+                case 'END_ATTEMPT_4':
+                    saveLastCompletedAttempt(agentId, 4);
+                    break;
+                case 'END_SHIFT':
+                    // Clear last completed attempt
+                    try {
+                        const key = STORAGE_KEYS.AGENT_LAST_COMPLETED_ATTEMPT + agentId;
+                        localStorage.removeItem(key);
+                        console.log('🧹 Cleared attempt progress for agent:', agentId);
+                    } catch (error) {
+                        console.error('❌ Error clearing attempt progress:', error);
+                    }
+                    break;
+            }
+        }
+
         // Get current state and allowed actions based on last action
         function getCurrentStateAndAllowedActions(agentId) {
             const lastAction = getLastAction(agentId);
@@ -904,10 +1055,10 @@
             console.log('🔍 Last action for agent', agentId, ':', lastAction);
 
             const allActions = [
-                { value: 'START_SHIFT', text: 'Start Shift (Clock In)' },
-                { value: 'START_BREAK', text: 'Start Break' },
-                { value: 'END_BREAK', text: 'End Break (Resume Work)' },
-                { value: 'END_SHIFT', text: 'End Shift (Clock Out)' }
+                { value: 'START_SHIFT', text: 'تسجيل حضور (بدء الشيفت)' },
+                { value: 'START_BREAK', text: 'بدء بريك' },
+                { value: 'END_BREAK', text: 'إنهاء بريك (عودة للعمل)' },
+                { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
             ];
 
             let allowedActions = [];
@@ -916,15 +1067,79 @@
             if (!lastAction) {
                 // First time login - only START_SHIFT allowed
                 currentState = 'NOT_STARTED';
-                allowedActions = [{ value: 'START_SHIFT', text: 'Start Shift (Clock In)' }];
+                allowedActions = [{ value: 'START_SHIFT', text: 'تسجيل حضور (بدء الشيفت)' }];
             } else {
                 switch (lastAction) {
                     case 'START_SHIFT':
-                        // After starting shift, can start break or end shift
+                        // After starting shift, can start first attempt, break, or end shift
                         currentState = 'SHIFT_STARTED';
                         allowedActions = [
-                            { value: 'START_BREAK', text: 'Start Break' },
-                            { value: 'END_SHIFT', text: 'End Shift (Clock Out)' }
+                            { value: 'START_ATTEMPT_1', text: 'بدء محاولة أولى' },
+                            { value: 'START_BREAK', text: 'بدء بريك' },
+                            { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
+                        ];
+                        break;
+
+                    case 'START_ATTEMPT_1':
+                        currentState = 'ATTEMPT_1_STARTED';
+                        allowedActions = [
+                            { value: 'END_ATTEMPT_1', text: 'إنهاء محاولة أولى' }
+                        ];
+                        break;
+
+                    case 'END_ATTEMPT_1':
+                        currentState = 'ATTEMPT_1_ENDED';
+                        allowedActions = [
+                            { value: 'START_ATTEMPT_2', text: 'بدء محاولة ثانية' },
+                            { value: 'START_BREAK', text: 'بدء بريك' },
+                            { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
+                        ];
+                        break;
+
+                    case 'START_ATTEMPT_2':
+                        currentState = 'ATTEMPT_2_STARTED';
+                        allowedActions = [
+                            { value: 'END_ATTEMPT_2', text: 'إنهاء محاولة ثانية' }
+                        ];
+                        break;
+
+                    case 'END_ATTEMPT_2':
+                        currentState = 'ATTEMPT_2_ENDED';
+                        allowedActions = [
+                            { value: 'START_ATTEMPT_3', text: 'بدء محاولة ثالثة' },
+                            { value: 'START_BREAK', text: 'بدء بريك' },
+                            { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
+                        ];
+                        break;
+
+                    case 'START_ATTEMPT_3':
+                        currentState = 'ATTEMPT_3_STARTED';
+                        allowedActions = [
+                            { value: 'END_ATTEMPT_3', text: 'إنهاء محاولة ثالثة' }
+                        ];
+                        break;
+
+                    case 'END_ATTEMPT_3':
+                        currentState = 'ATTEMPT_3_ENDED';
+                        allowedActions = [
+                            { value: 'START_ATTEMPT_4', text: 'بدء محاولة رابعة' },
+                            { value: 'START_BREAK', text: 'بدء بريك' },
+                            { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
+                        ];
+                        break;
+
+                    case 'START_ATTEMPT_4':
+                        currentState = 'ATTEMPT_4_STARTED';
+                        allowedActions = [
+                            { value: 'END_ATTEMPT_4', text: 'إنهاء محاولة رابعة' }
+                        ];
+                        break;
+
+                    case 'END_ATTEMPT_4':
+                        currentState = 'ATTEMPT_4_ENDED';
+                        allowedActions = [
+                            { value: 'START_BREAK', text: 'بدء بريك' },
+                            { value: 'END_SHIFT', text: 'تسجيل انصراف (إنهاء الشيفت)' }
                         ];
                         break;
 
@@ -932,24 +1147,23 @@
                         // After starting break, can only end break
                         currentState = 'ON_BREAK';
                         allowedActions = [
-                            { value: 'END_BREAK', text: 'End Break (Resume Work)' }
+                            { value: 'END_BREAK', text: 'إنهاء بريك (عودة للعمل)' }
                         ];
                         break;
 
                     case 'END_BREAK':
-                        // After ending break, can start break again or end shift
+                        // After ending break, get back to the work state (check what was last completed)
                         currentState = 'BREAK_ENDED';
-                        allowedActions = [
-                            { value: 'START_BREAK', text: 'Start Break' },
-                            { value: 'END_SHIFT', text: 'End Shift (Clock Out)' }
-                        ];
+                        // Allow continuing from where we left off - check last attempt status
+                        const workActions = getWorkActionsAfterBreak(agentId);
+                        allowedActions = workActions;
                         break;
 
                     case 'END_SHIFT':
                         // After ending shift, can only start a new shift
                         currentState = 'SHIFT_ENDED';
                         allowedActions = [
-                            { value: 'START_SHIFT', text: 'Start Shift (Clock In)' }
+                            { value: 'START_SHIFT', text: 'تسجيل حضور (بدء الشيفت)' }
                         ];
                         break;
 
@@ -967,6 +1181,12 @@
                 allowedActions,
                 lastAction
             };
+        }
+
+        // Helper function to convert number to Arabic text
+        function getAttemptNumberText(num) {
+            const numbers = ['أولى', 'ثانية', 'ثالثة', 'رابعة'];
+            return numbers[num - 1] || num.toString();
         }
 
         // Update action dropdown based on current state
@@ -1004,6 +1224,16 @@
                     return 'لسه مبدأتش.. لازم تعمل Start Shift عشان نسجل حضورك';
                 case 'SHIFT_STARTED':
                     return 'أنت دلوقتي شغال (Online).. متاح تاخد بريك أو تقفل الشيفت';
+                case 'ATTEMPT_1_STARTED':
+                case 'ATTEMPT_2_STARTED':
+                case 'ATTEMPT_3_STARTED':
+                case 'ATTEMPT_4_STARTED':
+                    return 'أنت دلوقتي في مكالمة/محاولة.. لما تخلص اعمل إنهاء محاولة';
+                case 'ATTEMPT_1_ENDED':
+                case 'ATTEMPT_2_ENDED':
+                case 'ATTEMPT_3_ENDED':
+                case 'ATTEMPT_4_ENDED':
+                    return 'تم إنهاء المحاولة.. تقدر تبدأ اللي بعدها أو تاخد بريك';
                 case 'ON_BREAK':
                     return 'أنت حالياً في بريك.. لما تخلص اعمل End Break عشان ترجع';
                 case 'BREAK_ENDED':
@@ -1086,9 +1316,9 @@
         }
 
         // Form submission
-        form.addEventListener('submit', async function(e) {
+        form.addEventListener('submit', async function (e) {
             e.preventDefault();
-            
+
             const leader = leaderSelect.value;
             const agent = agentSelect.value;
             const action = actionSelect.value;
@@ -1109,31 +1339,32 @@
                 actionSelect.focus();
                 return;
             }
-            
+
             // Validate password
             const selectedAgentOption = agentSelect.options[agentSelect.selectedIndex];
             const correctPassword = selectedAgentOption.dataset.password;
-            
+
             if (!correctPassword) {
                 showNotification('خطأ: لم يتم العثور على كلمة المرور للـ Agent المحدد', 'error', 4000);
                 return;
             }
-            
+
             if (password !== correctPassword) {
                 showNotification('كلمة المرور غير صحيحة', 'error', 4000);
+                showInlineMessage('passwordMessage', 'كلمة المرور غير صحيحة ❌', 'error');
                 passwordInput.focus();
                 return;
             }
 
-            // Disable submit button during submission
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'جاري الإرسال...';
-            
+            // Clear any inline errors if valid
+            clearInlineMessages();
+            // Show inline success message immediately
+            showInlineMessage('passwordMessage', 'جاري تسجيل الطلب.. ✅', 'success');
+
             // Get leader and agent names for display
             const leaderName = leaderSelect.options[leaderSelect.selectedIndex].textContent;
             const agentName = agentSelect.options[agentSelect.selectedIndex].textContent;
-            
-            
+
             // Prepare data
             const deviceInfo = getDeviceInfo();
             const userIP = await getUserIP();
@@ -1152,9 +1383,11 @@
             console.log('📱 Device Info:', deviceInfo);
             console.log('🌐 User IP:', userIP);
             console.log('📊 Complete Form Data:', formData);
-            
 
-            
+            // Disable submit button during submission
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'جاري الإرسال...';
+
             try {
                 // إرسال البيانات لجوجل شيت
                 await fetch(GOOGLE_SCRIPT_URL, {
@@ -1165,12 +1398,17 @@
                     },
                     body: JSON.stringify(formData)
                 });
-                
+
+                // بما اننا مستخدمين no-cors، مش هنقدر نقرأ الرد، بس طالما الكود وصل هنا يبقى اتبعت
                 // بما اننا مستخدمين no-cors، مش هنقدر نقرأ الرد، بس طالما الكود وصل هنا يبقى اتبعت
                 showNotification('تم إرسال البيانات وتسجيل الحضور بنجاح!', 'success', 4000);
+                showInlineMessage('passwordMessage', 'تم التسجيل بنجاح! ✅', 'success');
 
                 // Save the last action performed by this agent
                 saveLastAction(agent, action);
+
+                // Handle state persistence explicitly (Save completed attempts / Clear on End Shift)
+                handleStateUpdate(agent, action);
 
                 // Update action dropdown immediately after saving new action
                 updateActionDropdown(agent);
@@ -1195,12 +1433,13 @@
     </script>
     <script>
         if ('serviceWorker' in navigator) {
-          window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-              .then(reg => console.log('Service Worker Registered!', reg))
-              .catch(err => console.log('SW Registration Failed!', err));
-          });
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker Registered!', reg))
+                    .catch(err => console.log('SW Registration Failed!', err));
+            });
         }
-      </script>
+    </script>
 </body>
+
 </html>
